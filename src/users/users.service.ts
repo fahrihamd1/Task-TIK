@@ -33,4 +33,31 @@ private mapToResponseDto(user: any): UserResponseDto {
         register_date: user.register_date,
     };
 }
+async findAll(): Promise<UserResponseDto[]> {
+    const users = await this.knexService.connection('users').select('*');
+    return users.map(user => this.mapToResponseDto(user));
+}
+
+async findById(id: number): Promise<UserResponseDto | null> {
+    const user = await this.knexService.connection('users').where({ id }).first();
+    return user ? this.mapToResponseDto(user) : null;
+}
+
+async findByEmail(email: string): Promise<UserResponseDto | null> {
+    const user = await this.knexService.connection('users').where({ email }).first();
+    return user ? this.mapToResponseDto(user) : null;
+}
+
+async update(id: number, updateUserDto: Partial<CreateUserDto>): Promise<UserResponseDto | null> {
+    const updateData: any = { ...updateUserDto };
+    if (updateUserDto.password) {
+        updateData.password = await bcrypt.hash(updateUserDto.password, 10);
+    }
+    const [updatedUser] = await this.knexService.connection('users').where({ id }).update(updateData).returning('*');
+    return updatedUser ? this.mapToResponseDto(updatedUser) : null;
+}
+
+async delete(id: number): Promise<void> {
+    await this.knexService.connection('users').where({ id }).update({ is_active: false }).returning('*');
+    }
 }
